@@ -3,16 +3,21 @@
 import psycopg2
 from psycopg2 import OperationalError, errorcodes, errors
 
+# data processing
+import pandas as pd
+
 def connect_to_database(database, credentials_dict):
+
     try:
         # define connection
-        conexion = psycopg2.connect(
+        connection = psycopg2.connect(
             database = database,
             user = credentials_dict["username"],
             password =  credentials_dict["password"],
             host="localhost",
             port="5432" 
         )
+
 
     except OperationalError as e:
 
@@ -26,17 +31,24 @@ def connect_to_database(database, credentials_dict):
             print(f"Ocurrio el error {e}",e.pgcode)
 
 
-    return conexion
+    return connection
 
-def connect_and_query(database, credentials_dict, query):
+def connect_and_query(database, credentials_dict, query, columns = None):
 
     # establish connection
-    connection = connect_to_database(database, credentials_dict)
+    connection = connect_to_database(database=database, credentials_dict=credentials_dict)
     cursor = connection.cursor()
 
     # launch query
     cursor.execute(query)
-    result_df = cursor.fetchall()
+
+    # take column names from query or user input
+    if columns == "query":
+        columns = [desc[0] for desc in cursor.description]
+    elif not isinstance(columns, list):
+        columns = None
+
+    result_df = pd.DataFrame(cursor.fetchall(), columns=columns)
 
     # close connection
     cursor.close()
